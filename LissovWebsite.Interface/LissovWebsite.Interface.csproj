@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\..\site\master\LissovWebsite.Interface\Model\Api\Dividend.cs" Link="Dividend.cs" />
+    <Compile Include="..\..\..\site\master\LissovWebsite.Interface\Model\Api\FxRate.cs" Link="FxRate.cs" />
+    <Compile Include="..\..\..\site\master\LissovWebsite.Interface\Model\Api\HistPrice.cs" Link="HistPrice.cs" />
+    <Compile Include="..\..\..\site\master\LissovWebsite.Interface\Model\Api\Price.cs" Link="Price.cs" />
+    <Compile Include="..\..\..\site\master\LissovWebsite.Interface\Model\Api\PriceMark.cs" Link="PriceMark.cs" />
+    <Compile Include="..\..\..\site\master\LissovWebsite.Interface\Model\Api\PriceUpdateRequest.cs" Link="PriceUpdateRequest.cs" />
+    <Compile Include="..\..\..\site\master\LissovWebsite.Interface\Model\Api\PriceUpdateResult.cs" Link="PriceUpdateResult.cs" />
+    <Compile Include="..\..\..\site\master\LissovWebsite.Interface\Model\Api\Stock.cs" Link="Stock.cs" />
+    <Compile Include="..\..\..\site\master\LissovWebsite.Interface\Model\Api\Trade.cs" Link="Trade.cs" />
+    <Compile Include="..\..\..\site\master\LissovWebsite.Interface\Model\Api\Transaction.cs" Link="Transaction.cs" />
+  </ItemGroup>
+
+</Project>

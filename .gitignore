@@ -1,0 +1,15 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/Investbot/bin
+/Investbot/obj
+/Investbot/Properties/PublishProfiles
+/Investbot/appsettings.json
+/Investbot/Investbot.csproj.user
+/InvestbotTests/bin
+/LissovWebsite.Interface/bin
+/LissovWebsite.Interface/obj
+/InvestbotTests/obj
+/investmentbot.PublishSettings

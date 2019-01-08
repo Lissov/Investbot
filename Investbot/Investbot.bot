@@ -1,0 +1,79 @@
+{
+    "name": "Investbot",
+    "description": "",
+    "services": [
+        {
+            "type": "abs",
+            "tenantId": "edc248fb-330c-4a49-9156-1cb9b35dea5b",
+            "subscriptionId": "0620096e-6097-4929-bc6f-13ca58ec3de2",
+            "resourceGroup": "analytics",
+            "serviceName": "investbot",
+            "name": "investmentbot",
+            "id": "1",
+            "appId": "6baaa65d-84f3-4abb-beb8-e26ff6d16370"
+        },
+        {
+            "type": "blob",
+            "connectionString": "2uKnSNZm3x890VFr2Hw3IA==!UF4/6fG0/vn1MXB0EpSxeZd8aPYoLhUhrU14LUjOVHTVjhf2s1X6nDhn9TDidcYqY7ZWzY7W8d0GayD0G2dPbe8SZj5Add8/aD3RQbcjDD5a2ANqMJeG4gpFtc5520/tgnlIZNKvge6XswgE2IFTRncXn0+RHs6/fLq/Gy4fjLAKyESwDcUUzHMOp4auM92zGcd79RMJ+Wok4yOPq52ROL8+PmBMnNMGUi/N5jgT7Fk=",
+            "tenantId": "edc248fb-330c-4a49-9156-1cb9b35dea5b",
+            "subscriptionId": "0620096e-6097-4929-bc6f-13ca58ec3de2",
+            "resourceGroup": "analytics",
+            "serviceName": "investmentbot8c8f",
+            "id": "2"
+        },
+        {
+            "type": "endpoint",
+            "name": "development",
+            "endpoint": "http://localhost:3978/api/messages",
+            "appId": "",
+            "appPassword": "",
+            "id": "3"
+        },
+        {
+            "type": "endpoint",
+            "name": "production",
+            "appId": "6baaa65d-84f3-4abb-beb8-e26ff6d16370",
+            "appPassword": "MmgfiLzIYdiJ4nB6Dwibhg==!qGce1zoUovtdMIFhtHScY5AIhHEox94qdlL5ZwlAgJg=",
+            "endpoint": "https://investmentbot.azurewebsites.net/api/messages",
+            "id": "4"
+        },
+        {
+            "type": "appInsights",
+            "instrumentationKey": "tSzKiy+CtbrqQvNXGmoHkw==!6t+Ujo6t+NC1DW7NdZ2+UoOt2B9/Jz+Vf9wyjEjh0ao+DM5W3LwUZzzkeuH6+H7j",
+            "applicationId": "67335444-e9dd-4ebf-9182-43095a835a85",
+            "apiKeys": {},
+            "tenantId": "edc248fb-330c-4a49-9156-1cb9b35dea5b",
+            "subscriptionId": "0620096e-6097-4929-bc6f-13ca58ec3de2",
+            "resourceGroup": "analytics",
+            "serviceName": "investmentbotcb65bm",
+            "id": "5"
+        },
+        {
+            "type": "luis",
+            "appId": "13ec4c81-37e8-4dba-880c-d9cb33736299",
+            "authoringKey": "gDw2IFR+W5EplEmWq/zUZQ==!LsAeE5W61w6uSGkaFPqxzn1nLQEv1eGIqP1ceN0HuDeVsSCOIO6tLlajEBKinc00",
+            "version": "0.1",
+            "region": "westus",
+            "name": "InvestBotLuisApplication",
+            "id": "6"
+        },
+        {
+            "type": "endpoint",
+            "name": "investservice-development",
+            "endpoint": "http://localhost:56710/api/",
+            "appId": "investbot_user",
+            "appPassword": "Wt9T0XB4YkMUXHpM9RdeuQ==!lJ6jmkNBF1KKas8awCb4LgX70lAF3JYcji2GjYa6QKZDpLjRT9zWf7ZpdBItTrOZ",
+            "id": "7"
+        },
+        {
+            "type": "endpoint",
+            "name": "investservice-production",
+            "endpoint": "http://lissov.kiev.ua/api/",
+            "appId": "investbot_user",
+            "appPassword": "0wch9tsamyKqugB0BchZyQ==!NhM60F1mAPIXSNeDAeWCMdQPxziQrN8dm4kYrZ0qaZookezgpq2o8c6gvyQ0QlT2",
+            "id": "8"
+        }
+    ],
+    "padlock": "SoDJ2fb3vDp0qiUv8Kj53Q==!6fPpxfyNz/UnQz/0cuZEYvVu9hjB3+qG2J5dDN8Cll37RZNy/9b0wUDNUt1zyjlL",
+    "version": "2.0"
+}
