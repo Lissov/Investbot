@@ -48,7 +48,7 @@ namespace Investbot.BusinessLogic
             }
         }
 
-        public async Task<IEnumerable<Stock>> GetStocks(string channelName, string channelId)
+        public async Task<StockList> GetStocks(string channelName, string channelId)
         {
             await CheckLogin();
             
@@ -60,10 +60,14 @@ namespace Investbot.BusinessLogic
                 var res = await client.DownloadStringTaskAsync(new Uri(this.url + request));
                 //var parsed = JsonParser.Parse(res);
                 var parsed = JsonConvert.DeserializeObject<StockList>(res);
-                var open = parsed.Stocks
-                    .Where(s => s.Trades.Sum(t => t.Quantity) > 0);
+                if (parsed.Stocks != null)
+                {
+                    parsed.Stocks = parsed.Stocks
+                        .Where(s => s.Trades.Sum(t => t.Quantity) > 0)
+                        .ToArray();
+                }
 
-                return open;
+                return parsed;
             }
         }
 

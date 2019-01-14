@@ -39,7 +39,16 @@ namespace Investbot.Dialogs.Portfolio
         private async Task<DialogTurnResult> InitializeStateStepAsync(WaterfallStepContext stepContext, CancellationToken cancellationtoken)
         {
             var portfolio = await portfolioStateAccessor.GetAsync(stepContext.Context, () => new PortfolioState { LoadedAt = null });
-            return await stepContext.NextAsync();
+            var userInfo = await userInfoAccessor.GetAsync(stepContext.Context, () => null);
+            if (userInfo?.TermsAcceptedDate == null)
+            {
+                await stepContext.Context.SendActivityAsync("Please review and accept our Privacy Policy and User Agreement before using the portfolio service.");
+                return await stepContext.EndDialogAsync();
+            }
+            else
+            {
+                return await stepContext.NextAsync();
+            }
         }
 
         private async Task<DialogTurnResult> LoadPortfolioStepAsync(WaterfallStepContext stepContext, CancellationToken cancellationtoken)
@@ -53,9 +62,14 @@ namespace Investbot.Dialogs.Portfolio
                     await stepContext.Context.SendActivityAsync($"Loading portfolio ...");
                     var userInfo = await userInfoAccessor.GetAsync(stepContext.Context, null);
                     var channelName = userInfo.ChannelId == "emulator" ? "facebook" : userInfo.ChannelId;
-                    var channelId = userInfo.ChannelId == "emulator" ? "<add here>" : userInfo.Id;
+                    var channelId = userInfo.ChannelId == "emulator" ? "-2304256339648941" : userInfo.Id;
                     var r = await this.investService.GetStocks(channelName, channelId);
-                    portfolio.Stocks = r.ToArray();
+                    if (r.Status != Api.StockStatus.Success)
+                    {
+                        await stepContext.Context.SendActivityAsync(GetStockLoadErrorMessage(r));
+                        return await stepContext.EndDialogAsync();
+                    }
+                    portfolio.Stocks = r.Stocks.ToArray();
                     portfolio.LoadedAt = DateTime.Now;
                     portfolio.Prices = new Dictionary<int, Api.Price>();
                     //await stepContext.Context.SendActivityAsync($"You have {r.Count()} positions.");
@@ -70,7 +84,7 @@ namespace Investbot.Dialogs.Portfolio
 
             if (portfolio?.LoadedAt != null)
             {
-                await stepContext.Context.SendActivityAsync($"Portfolio with {portfolio.Stocks.Count()} positions last loaded at {portfolio.LoadedAt}.");
+                //await stepContext.Context.SendActivityAsync($"Portfolio with {portfolio.Stocks.Count()} positions last loaded at {portfolio.LoadedAt}.");
                 var rates = portfolio.RatesToEur.Keys
                     .Where(k => k != "EUR")
                     .Select(k => $"{k}: {Math.Round(portfolio.RatesToEur[k], 2)}");
@@ -79,6 +93,17 @@ namespace Investbot.Dialogs.Portfolio
             }
 
             return await stepContext.EndDialogAsync();
+        }
+
+        private string GetStockLoadErrorMessage(Api.StockList r)
+        {
+            switch (r.Status)
+            {
+                case Api.StockStatus.ChannelNotRegistered:
+                    return "Channel is not registered. Please contact the bot administrator to register a channel.";
+                default:
+                    return "";
+            }
         }
 
         private async Task<DialogTurnResult> LoadPricesStepAsync(WaterfallStepContext stepContext, CancellationToken cancellationtoken)
@@ -90,7 +115,7 @@ namespace Investbot.Dialogs.Portfolio
                 if (!portfolio.Prices.ContainsKey(portfolioStock.Id))
                 {
                     var p = await investService.GetPrice(portfolioStock.Code, portfolioStock.Exchange);
-                    if (p != null)
+                    if (p?.LastPrice != null)
                         portfolio.Prices[portfolioStock.Id] = p;
                 }
             }

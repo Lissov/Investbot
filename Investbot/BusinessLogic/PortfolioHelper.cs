@@ -53,10 +53,12 @@ namespace Investbot.BusinessLogic
                         .Select(g =>
                         {
                             var amounts = g.Select(s =>
-                                s.Trades.Select(t => t.Quantity).Sum()
-                                * (portfolio.Prices[s.Id].LastPrice ?? -1)
-                            );
-                            if (amounts.Any(a => a < 0)) throw new Exception("Missing price on one of stocks");
+                            {
+                                var amt = s.Trades.Select(t => t.Quantity).Sum()
+                                          * (portfolio.Prices[s.Id].LastPrice ?? -1);
+                                if (amt < 0) throw new Exception("Negative amount on: " + s.Code);
+                                return amt;
+                            });
                             return new {Currency = g.Key, Amount = amounts.Sum()};
                         })
                         .ToList();
