@@ -4,10 +4,12 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Investbot.Dialogs.Portfolio;
 using LissovWebsite.Interface.Model.Api;
 using Microsoft.Bot.Builder;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Api = LissovWebsite.Interface.Model.Api;
 
 namespace Investbot.BusinessLogic
 {
@@ -138,6 +140,44 @@ namespace Investbot.BusinessLogic
             {
                 return null;
             }
+        }
+
+        public async Task LoadPortfolio(UserInfo userInfo, PortfolioState portfolio)
+        {
+            var channelName = userInfo.ChannelId == "emulator" ? "facebook" : userInfo.ChannelId;
+            var channelId = userInfo.ChannelId == "emulator" ? "2304256339648941" : userInfo.User.Id;
+            var r = await GetStocks(channelName, channelId);
+            portfolio.Status = r.Status;
+            if (r.Status != Api.StockStatus.Success)
+            {
+                return;
+            }
+            portfolio.Stocks = r.Stocks.ToArray();
+            portfolio.LoadedAt = DateTime.Now;
+            portfolio.Prices = new Dictionary<int, Api.Price>();
+            //await stepContext.Context.SendActivityAsync($"You have {r.Count()} positions.");
+            var currencies = portfolio.Stocks.Select(s => s.Currency).Distinct();
+            portfolio.RatesToEur = await GetRatesToEur(currencies);
+        }
+
+        public async Task<List<string>> LoadPrices(PortfolioState portfolio)
+        {
+            foreach (var portfolioStock in portfolio.Stocks)
+            {
+                if (!portfolio.Prices.ContainsKey(portfolioStock.Id))
+                {
+                    var p = await GetPrice(portfolioStock.Code, portfolioStock.Exchange);
+                    if (p?.LastPrice != null)
+                        portfolio.Prices[portfolioStock.Id] = p;
+                }
+            }
+
+            var missing = portfolio.Stocks
+                .Where(s => !portfolio.Prices.ContainsKey(s.Id) || portfolio.Prices[s.Id].LastPrice <= 0)
+                .Select(s => s.Code)
+                .ToList();
+
+            return missing;
         }
     }
 }

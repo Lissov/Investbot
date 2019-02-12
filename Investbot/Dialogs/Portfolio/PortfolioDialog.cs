@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Investbot.BusinessLogic;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
+using Microsoft.Bot.Schema;
 using Api = LissovWebsite.Interface.Model.Api;
 
 namespace Investbot.Dialogs.Portfolio
@@ -59,22 +60,21 @@ namespace Investbot.Dialogs.Portfolio
             {
                 try
                 {
+                    portfolio = portfolio ?? new PortfolioState();
                     await stepContext.Context.SendActivityAsync($"Loading portfolio ...");
-                    var userInfo = await userInfoAccessor.GetAsync(stepContext.Context, null);
-                    var channelName = userInfo.ChannelId == "emulator" ? "facebook" : userInfo.ChannelId;
-                    var channelId = userInfo.ChannelId == "emulator" ? "-2304256339648941" : userInfo.Id;
-                    var r = await this.investService.GetStocks(channelName, channelId);
-                    if (r.Status != Api.StockStatus.Success)
+
+                    var reply = stepContext.Context.Activity.CreateReply();
+                    reply.Text = null;
+                    reply.Type = ActivityTypes.Typing;
+                    await stepContext.Context.SendActivityAsync(reply); //show typing pause
+
+                    var userInfo = await userInfoAccessor.GetAsync(stepContext.Context);
+                    await investService.LoadPortfolio(userInfo, portfolio);
+                    if (portfolio.Status != Api.StockStatus.Success)
                     {
-                        await stepContext.Context.SendActivityAsync(GetStockLoadErrorMessage(r));
+                        await stepContext.Context.SendActivityAsync(GetStockLoadErrorMessage(portfolio.Status));
                         return await stepContext.EndDialogAsync();
                     }
-                    portfolio.Stocks = r.Stocks.ToArray();
-                    portfolio.LoadedAt = DateTime.Now;
-                    portfolio.Prices = new Dictionary<int, Api.Price>();
-                    //await stepContext.Context.SendActivityAsync($"You have {r.Count()} positions.");
-                    var currencies = portfolio.Stocks.Select(s => s.Currency).Distinct();
-                    portfolio.RatesToEur = await this.investService.GetRatesToEur(currencies);
                 }
                 catch (Exception ex)
                 {
@@ -85,24 +85,22 @@ namespace Investbot.Dialogs.Portfolio
             if (portfolio?.LoadedAt != null)
             {
                 //await stepContext.Context.SendActivityAsync($"Portfolio with {portfolio.Stocks.Count()} positions last loaded at {portfolio.LoadedAt}.");
-                var rates = portfolio.RatesToEur.Keys
-                    .Where(k => k != "EUR")
-                    .Select(k => $"{k}: {Math.Round(portfolio.RatesToEur[k], 2)}");
-                await stepContext.Context.SendActivityAsync($"FxRates: {string.Join(", ", rates)}.");
+                var ratesMsg = new PortfolioHelper().GetRatesMessage(portfolio);
+                await stepContext.Context.SendActivityAsync(ratesMsg);
                 return await stepContext.NextAsync();
             }
 
             return await stepContext.EndDialogAsync();
         }
 
-        private string GetStockLoadErrorMessage(Api.StockList r)
+        private string GetStockLoadErrorMessage(string status)
         {
-            switch (r.Status)
+            switch (status)
             {
                 case Api.StockStatus.ChannelNotRegistered:
                     return "Channel is not registered. Please contact the bot administrator to register a channel.";
                 default:
-                    return "";
+                    return "Unknown error!";
             }
         }
 
@@ -110,20 +108,11 @@ namespace Investbot.Dialogs.Portfolio
         {
             var portfolio = await portfolioStateAccessor.GetAsync(stepContext.Context);
 
-            foreach (var portfolioStock in portfolio.Stocks)
-            {
-                if (!portfolio.Prices.ContainsKey(portfolioStock.Id))
-                {
-                    var p = await investService.GetPrice(portfolioStock.Code, portfolioStock.Exchange);
-                    if (p?.LastPrice != null)
-                        portfolio.Prices[portfolioStock.Id] = p;
-                }
-            }
-            var missing = portfolio.Stocks.Where(s => !portfolio.Prices.ContainsKey(s.Id) || portfolio.Prices[s.Id].LastPrice <= 0).ToList();
+            var missing = await investService.LoadPrices(portfolio);
             if (missing.Any())
             {
                 await stepContext.Context.SendActivityAsync(
-                    $"Not all prices loaded yet. Waiting for [{string.Join(", ", missing.Select(m => m.Code))}]");
+                    $"Not all prices loaded yet. Waiting for [{string.Join(", ", missing)}]");
             }
             else
             {

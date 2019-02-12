@@ -75,5 +75,39 @@ namespace Investbot.BusinessLogic
                 return ex.Message;
             }
         }
+
+        public IEnumerable<string> GetAllRecommendations(PortfolioState portfolio)
+        {
+            var recommendations = GetRecommendations(portfolio);
+            if (recommendations.Any())
+            {
+                yield return "Recommendations for today:";
+                foreach (var r in recommendations)
+                {
+                    yield return r;
+                }
+            }
+            else
+            {
+                yield return "Now all in the defined range.";
+            }
+
+            var marks = GetMarksStatus(portfolio);
+            if (!string.IsNullOrEmpty(marks))
+            {
+                yield return marks;
+            }
+
+            yield return "TOTALS: " + GetSummary(portfolio);
+        }
+
+
+        public string GetRatesMessage(PortfolioState portfolio)
+        {
+            var rates = portfolio.RatesToEur.Keys
+                .Where(k => k != "EUR")
+                .Select(k => $"{k}: {Math.Round(portfolio.RatesToEur[k], 2)}");
+            return $"FxRates: {string.Join(", ", rates)}.";
+        }
     }
 }

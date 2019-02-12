@@ -52,7 +52,7 @@ namespace Investbot.Dialogs.Privacy
             if (AreTermsAccepted(userInfo))
             {
                 await stepContext.Context.SendActivityAsync(
-                    $"You are identified as {userInfo.User} with ID {userInfo.Id} on channel {userInfo.ChannelId}. "
+                    $"You are identified as {userInfo.User.Name} with ID {userInfo.User.Id} on channel {userInfo.ChannelId}. "
                   + $"You accepted Privacy Policy and User Agreement on {userInfo.TermsAcceptedDate.ToString()}");
             }
         }

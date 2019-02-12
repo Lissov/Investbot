@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using Hangfire;
 using Investbot.BusinessLogic;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -105,6 +106,9 @@ namespace Investbot
 
             var investService = new InvestDataService(investServiceEndpoint.Endpoint, investServiceEndpoint.AppId, investServiceEndpoint.AppPassword);
             services.AddSingleton(investService);
+            var botAccount = new MicrosoftAppCredentials(endpointService.AppId, endpointService.AppPassword);
+            var pushService = new PortfolioPushService(investService, botAccount, dataStore);
+            services.AddSingleton(pushService);
 
             services.AddBot<InvestbotBot> (options =>
             {
@@ -118,13 +122,34 @@ namespace Investbot
                     logger.LogError($"Exception caught : {exception}");
                     await context.SendActivityAsync("Sorry, it looks like something went wrong.");
                 };              
-            });           
+            });
+
+            var connectionString =
+                "Server=tcp:iwnp0c751k.database.windows.net,1433;Initial Catalog=invest_hangfire;Persist Security Info=False;User ID=Investbot;Password=InvBotPDollarwyrdSharp_;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
+            try
+            {
+                services.AddHangfire(conf => conf.UseSqlServerStorage(connectionString));
+                //pushService.SetupJob();
+            }
+            catch (Exception ex)
+            {
+                Diagnostic.Log += ex.Message;
+            }
         }
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory, IHostingEnvironment env)
         {
             this.loggerFactory = loggerFactory;
-            ;
+
+            try {
+                app.UseHangfireDashboard();
+                app.UseHangfireServer();
+            }
+            catch (Exception ex)
+            {
+                Diagnostic.Log += ex.Message;
+            }
+
             app.UseDefaultFiles()
                 .UseStaticFiles()
                 .UseBotFramework();

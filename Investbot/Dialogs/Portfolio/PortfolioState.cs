@@ -8,6 +8,7 @@ namespace Investbot.Dialogs.Portfolio
 {
     public class PortfolioState
     {
+        public string Status { get; set; }
         public Api.Stock[] Stocks { get; set; }
         public Dictionary<int, Api.Price> Prices { get; set; }
         public Dictionary<string, decimal> RatesToEur { get; set; }

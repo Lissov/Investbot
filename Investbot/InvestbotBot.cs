@@ -8,10 +8,14 @@ using Investbot.BusinessLogic;
 using Investbot.Dialogs.Portfolio;
 using Investbot.Dialogs.Price;
 using Investbot.Dialogs.Privacy;
+using Investbot.Dialogs.Updater;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
+using Microsoft.Bot.Connector;
+using Microsoft.Bot.Connector.Authentication;
 using Microsoft.Bot.Schema;
 using Newtonsoft.Json.Linq;
+using Timex;
 
 namespace Investbot
 {
@@ -34,6 +38,7 @@ namespace Investbot
         private readonly IStatePropertyAccessor<PortfolioState> portfolioStateAccessor;
         private readonly IStatePropertyAccessor<DialogState> dialogStateAccessor;
         private readonly IStatePropertyAccessor<UserInfo> userStateAccessor;
+        private readonly IStatePropertyAccessor<UpdaterState> updaterStateAccessor;
         public static readonly string LuisConfiguration = "InvestBotLuisApplication";
 
         // Supported LUIS Intents
@@ -43,12 +48,15 @@ namespace Investbot
         public const string TermsIntent = "Terms";
         public const string CancelIntent = "Cancel";
         public const string HelpIntent = "Help";
+        public const string UpdaterIntent = "PushInfo";
         public const string NoneIntent = "None";
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>                        
-        public InvestbotBot(BotServices services, UserState userState, InvestDataService investService, ConversationState conversationState)
+        public InvestbotBot(BotServices services, UserState userState,
+            InvestDataService investService, PortfolioPushService pushService,
+            ConversationState conversationState)
         {
             this.services = services ?? throw new ArgumentNullException(nameof(services));
             this.userState = userState ?? throw new ArgumentNullException(nameof(userState));
@@ -58,6 +66,7 @@ namespace Investbot
             this.portfolioStateAccessor = userState.CreateProperty<PortfolioState>(nameof(PortfolioState));
             this.dialogStateAccessor = conversationState.CreateProperty<DialogState>(nameof(DialogState));
             this.userStateAccessor = conversationState.CreateProperty<UserInfo>(nameof(UserInfo));
+            this.updaterStateAccessor = conversationState.CreateProperty<UpdaterState>(nameof(UpdaterState));
 
             // Verify LUIS configuration.
             if (!services.LuisServices.ContainsKey(LuisConfiguration))
@@ -69,6 +78,7 @@ namespace Investbot
             Dialogs.Add(new PriceDialog(priceStateAccessor));
             Dialogs.Add(new PrivacyDialog(userStateAccessor));
             Dialogs.Add(new PortfolioDialog(investService, userStateAccessor, portfolioStateAccessor));
+            Dialogs.Add(new UpdaterDialog(userStateAccessor, updaterStateAccessor, pushService));
         }
 
         private DialogSet Dialogs { get; set; }
@@ -92,6 +102,7 @@ namespace Investbot
                 var topIntent = topScoringIntent.Value.intent;
 
                 await UpdatePriceState(luisResults, dc.Context);
+                await UpdateUpdaterState(luisResults, dc.Context);
 
                 var interrupted = await IsTurnInterruptedAsync(dc, topIntent);
                 if (interrupted)
@@ -122,6 +133,10 @@ namespace Investbot
                                     break;
                                 case PortfolioIntent:
                                     await dc.BeginDialogAsync(nameof(PortfolioDialog));
+                                    break;
+                                case UpdaterIntent:
+
+                                    await dc.BeginDialogAsync(nameof(UpdaterDialog));
                                     break;
 
                                 case NoneIntent:
@@ -163,12 +178,12 @@ namespace Investbot
             await conversationState.SaveChangesAsync(turnContext);
             await userState.SaveChangesAsync(turnContext);
         }
-
+        
         private async Task GreetNewUser(DialogContext dc)
         {
             var userInfo = await userStateAccessor.GetAsync(dc.Context);
-            var message = (!string.IsNullOrEmpty(userInfo?.User))
-                ? $"Hi {userInfo.User}, I am InvestmentBot. Glad to see you here! You are identified with ID [{userInfo.Id}] on channel [{userInfo.ChannelId}]"
+            var message = (!string.IsNullOrEmpty(userInfo?.User?.Name))
+                ? $"Hi {userInfo.User.Name}, I am InvestmentBot. Glad to see you here! You are identified with ID [{userInfo.User.Id}] on channel [{userInfo.ChannelId}]"
                 : "Hi, I am Investment Bot! I was not able to identify you, so some of my features will be not accessible.";
 
             await dc.Context.SendActivityAsync(message);
@@ -195,6 +210,7 @@ namespace Investbot
             {
                 await dc.Context.SendActivityAsync("Let me try to provide some help.");
                 await dc.Context.SendActivityAsync("I can tell price of stocks, understand being asked for help, or being asked to cancel what I am doing. Try typing 'What is the price of Microsoft?'");
+                await dc.Context.SendActivityAsync("Jobs in queue: " + PortfolioPushService.QueueSize + ": " + PortfolioPushService.Queue);
 
                 if (dc.ActiveDialog != null)
                 {
@@ -235,6 +251,38 @@ namespace Investbot
             }
         }
 
+        private async Task UpdateUpdaterState(RecognizerResult luisResult, ITurnContext turnContext)
+        {
+            try
+            {
+                if (luisResult.Entities != null && luisResult.Entities.HasValues)
+                {
+                    var updaterState = await updaterStateAccessor.GetAsync(turnContext, () => new UpdaterState());
+                    var entities = luisResult.Entities;
+                    if (entities["push_action"] != null)
+                    {
+                        updaterState.Action = entities["push_action"][0][0].ToString();
+                    }
+                    if (entities["push_detalization"] != null)
+                    {
+                        updaterState.Detalization = entities["push_detalization"][0][0].ToString();
+                    }
+                    if (entities["datetime"] != null)
+                    {
+                        dynamic dt = entities["datetime"];
+                        if (TimexParser.TryParse(dt, out Timex.Timex timex))
+                            updaterState.UpdateDateTime = timex;
+                        else
+                            await turnContext.SendActivityAsync($"Can't parse timex expression: {dt}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await turnContext.SendActivityAsync("Error: " + ex.Message);
+            }
+        }
+
         private static string GetEntityValue(JObject entities, string[] stockNameEntities)
         {
             foreach (var key in stockNameEntities)
@@ -250,13 +298,21 @@ namespace Investbot
 
         private async Task UpdateUserState(ITurnContext turnContext)
         {
-            var userInfo = await userStateAccessor.GetAsync(turnContext, () => new UserInfo());
+            try
+            {
+                var userInfo = await userStateAccessor.GetAsync(turnContext, () => new UserInfo());
 
-            userInfo.User = turnContext.Activity.From.Name;
-            userInfo.Id = turnContext.Activity.From.Id;
-            userInfo.ChannelId = turnContext.Activity.ChannelId;
+                userInfo.User = new ChannelData(turnContext.Activity.From);
+                userInfo.Recipient = new ChannelData(turnContext.Activity.Recipient);
+                userInfo.ChannelId = turnContext.Activity.ChannelId;
+                userInfo.ServiceUrl = turnContext.Activity.ServiceUrl;
 
-            await userStateAccessor.SetAsync(turnContext, userInfo);
+                await userStateAccessor.SetAsync(turnContext, userInfo);
+            }
+            catch (Exception ex)
+            {
+                await turnContext.SendActivityAsync("Error: " + ex.Message);
+            }
         }
     }
 }
