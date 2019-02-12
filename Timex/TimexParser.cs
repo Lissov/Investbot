@@ -46,7 +46,7 @@ namespace Timex
                         case "time":
                             var timexTime = part.timex[0].ToString();
                             if (timexTime[0] == 'T') timexTime = timexTime.Substring(1);
-                            if (!DateTime.TryParseExact(timexTime, new[] {"HH", "HHmm", "HH:mm", "HHmmSS", "HH:mm:SS" },
+                            if (!DateTime.TryParseExact(timexTime, new[] {"HH", "HHmm", "HH:mm", "HHmmss", "HH:mm:ss" },
                                 CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedTime))
                             {
                                 return false;
@@ -135,7 +135,7 @@ namespace Timex
         private static bool TryParseExactDate(string timex, out DateTimeEx parsed)
         {
             parsed = new DateTimeEx();
-            var basic = timex.Replace("-", "").Replace(":", "");
+            var basic = timex.Replace("-", "").Replace(":", "").Replace("T", "").Replace(" ", "");
             if (basic.Substring(0, 4).ToUpper() == "XXXX")
             {
                 basic = DateTime.Today.Year.ToString() + basic.Substring(4);
@@ -156,15 +156,15 @@ namespace Timex
                 parsed.IsDayPattern = true;
             }
 
+            //if (basic.EndsWith("Z")) basic = basic.Substring(0, basic.Length - 1);
             if (!DateTime.TryParseExact(basic, new[]
-                { "yyyyMMdd", "yyyyMMddTHHmm", "yyyyMMddTHHmmss",
-                    "yyyyMMdd HHmm", "yyyyMMdd HHmmss" },
-                CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))
+                { "yyyyMMdd", "yyyyMMddHHmm", "yyyyMMddHHmmss", "yyyyMMddHHmmssZ" },
+                CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTime parsedDate))
             {
                 return false;
             };
 
-            parsed.Value = parsedDate;
+            parsed.Value = parsedDate.ToUniversalTime();
             return true;
         }
 

@@ -9,7 +9,7 @@ namespace Timex.Tests
     {
         private Timex ParseAndParse(string json)
         {
-            dynamic obj = JsonConvert.DeserializeObject(json);
+            dynamic obj = JsonParser.Parse(json);
             if (!TimexParser.TryParse(obj, out Timex timex))
                 throw new Exception("Not parsed");
             return timex;
@@ -82,7 +82,7 @@ namespace Timex.Tests
         {
             var result = ParseAndParse(
                 @"{""datetime"": [ {""type"": ""datetime"", ""timex"": [ ""2019-02-11T23:20:57Z"" ] } ]}");
-            Assert.AreEqual(new DateTime(2019, 02, 11, 23, 20, 57), result.Value);
+            Assert.AreEqual(DateTime.SpecifyKind(new DateTime(2019, 02, 11, 23, 20, 57), DateTimeKind.Utc), result.Value);
         }
 
         [TestMethod]
@@ -108,10 +108,10 @@ namespace Timex.Tests
         [TestMethod]
         public void Period()
         {
+            Assert.Inconclusive("Parsing period in years not implemented");
             var result = ParseAndParse(
                 @"{""datetime"": [ {""type"": ""set"", ""timex"": [ ""P3Y6M4DT12H30M5S"" ] } ]}");
             //Assert.AreEqual(new TimeSpan(3, 6, 4, 12, 47, 30), result.Interval);
-            Assert.Inconclusive();
         }
 
         [TestMethod]
@@ -175,7 +175,7 @@ namespace Timex.Tests
         [TestMethod]
         public void RealCase1()
         {
-            var result = ParseAndParse(@"{[  {    ""type"": ""set"",    ""timex"": [      ""PT5M""    ]  }]}");
+            var result = ParseAndParse(@"{""datetime"": [  {    ""type"": ""set"",    ""timex"": [      ""PT5M""    ]  }]}");
             Assert.AreEqual(new TimeSpan(0, 0, 5, 0), result.Interval); // 5 minutes
         }
     }

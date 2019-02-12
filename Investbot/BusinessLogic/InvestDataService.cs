@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Investbot.Dialogs.Portfolio;
 using LissovWebsite.Interface.Model.Api;
-using Microsoft.Bot.Builder;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Timex;
 using Api = LissovWebsite.Interface.Model.Api;
 
 namespace Investbot.BusinessLogic
